@@ -97,6 +97,22 @@
         text-transform: uppercase;
       }
 
+      .projects-filter-label {
+        display: block;
+        margin: 4px 0 6px;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .projects-filter-select {
+        width: 100%;
+        border: 1px solid #dbd2cd;
+        border-radius: 9px;
+        padding: 8px;
+        margin-bottom: 8px;
+        background: #fff;
+      }
+
       .view-list,
       .projects-list {
         list-style: none;
@@ -455,6 +471,10 @@
         </div>
 
         <p class="projects-title">Projects</p>
+        <label class="projects-filter-label" for="project-filter-select">Project Name Filter</label>
+        <select id="project-filter-select" class="projects-filter-select">
+          <option value="">All Projects</option>
+        </select>
         <ul id="project-list" class="projects-list"></ul>
       </aside>
 
@@ -478,14 +498,7 @@
             <input id="task-content" name="content" placeholder="Task name..." required />
 
             <div class="composer-grid">
-              <input
-                id="task-project"
-                name="projectName"
-                list="project-options"
-                placeholder="Project (e.g., Work)"
-                required
-              />
-              <datalist id="project-options"></datalist>
+              <select id="task-project" name="projectName" required></select>
 
               <input id="task-due-date" name="dueDate" type="date" />
 
@@ -551,7 +564,7 @@
       const statusElement = document.getElementById("status");
       const taskListElement = document.getElementById("task-list");
       const projectListElement = document.getElementById("project-list");
-      const projectOptionsElement = document.getElementById("project-options");
+      const projectFilterSelectElement = document.getElementById("project-filter-select");
       const monthYearElement = document.getElementById("month-year");
       const monthValueElement = document.getElementById("month-value");
       const monthControlsElement = document.getElementById("month-controls");
@@ -662,15 +675,44 @@
         return deduped;
       }
 
-      function updateComposerProjectOptions() {
+      function updateProjectSelectors() {
         const options = getProjectOptions();
-        projectOptionsElement.innerHTML = "";
+        const currentTaskProject = taskProjectElement.value;
+        const currentFilter = state.projectFilter;
+
+        taskProjectElement.innerHTML = "";
+        options.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          taskProjectElement.appendChild(option);
+        });
+
+        if (currentTaskProject && options.includes(currentTaskProject)) {
+          taskProjectElement.value = currentTaskProject;
+        } else {
+          taskProjectElement.value = options[0] || "General";
+        }
+
+        projectFilterSelectElement.innerHTML = "";
+        const allOption = document.createElement("option");
+        allOption.value = "";
+        allOption.textContent = "All Projects";
+        projectFilterSelectElement.appendChild(allOption);
 
         options.forEach((name) => {
           const option = document.createElement("option");
           option.value = name;
-          projectOptionsElement.appendChild(option);
+          option.textContent = name;
+          projectFilterSelectElement.appendChild(option);
         });
+
+        if (currentFilter && options.includes(currentFilter)) {
+          projectFilterSelectElement.value = currentFilter;
+        } else {
+          projectFilterSelectElement.value = "";
+          state.projectFilter = "";
+        }
       }
 
       function updateActiveNavigation() {
@@ -684,6 +726,10 @@
           const isActive = button.dataset.project === state.projectFilter && Boolean(state.projectFilter);
           button.classList.toggle("active", isActive);
         });
+
+        if (projectFilterSelectElement.value !== (state.projectFilter || "")) {
+          projectFilterSelectElement.value = state.projectFilter || "";
+        }
 
         monthControlsElement.classList.toggle("disabled", state.view !== "month");
       }
@@ -739,6 +785,7 @@
           button.addEventListener("click", () => {
             state.projectFilter = project.name;
             state.view = "inbox";
+            projectFilterSelectElement.value = project.name;
             updateActiveNavigation();
             renderHeading();
             loadTasks();
@@ -897,6 +944,7 @@
       function openComposer(task = null) {
         composerElement.classList.remove("hidden");
         const options = getProjectOptions();
+        updateProjectSelectors();
 
         if (task) {
           setComposerModeForEdit(task);
@@ -933,7 +981,7 @@
       async function fetchProjects() {
         const result = await apiFetch("/api/projects");
         state.projects = Array.isArray(result.projects) ? result.projects : [];
-        updateComposerProjectOptions();
+        updateProjectSelectors();
         renderProjects();
       }
 
@@ -1059,10 +1107,19 @@
         button.addEventListener("click", () => {
           state.view = button.dataset.view;
           state.projectFilter = "";
+          projectFilterSelectElement.value = "";
           updateActiveNavigation();
           renderHeading();
           loadTasks();
         });
+      });
+
+      projectFilterSelectElement.addEventListener("change", () => {
+        state.projectFilter = String(projectFilterSelectElement.value || "").trim();
+        state.view = "inbox";
+        updateActiveNavigation();
+        renderHeading();
+        loadTasks();
       });
 
       searchElement.addEventListener("input", () => {
