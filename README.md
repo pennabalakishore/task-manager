@@ -39,6 +39,11 @@ Recommended Vercel Environment Variables:
 - `AUTH_TOKEN_SECRET` -> long random string (required for stable secure login tokens)
 - `AUTH_TOKEN_TTL_SECONDS` -> optional (default `1209600`, i.e. 14 days)
 
+Note:
+
+- Current auth uses a stable signed token for reliability across serverless invocations.
+- Existing stale tokens in browser storage may fail after auth updates. If login loops, clear site storage and login again.
+
 CLI alternative:
 
 ```bash

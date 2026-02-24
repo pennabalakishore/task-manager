@@ -345,22 +345,35 @@ function signTokenPayload(payloadPart) {
   return base64UrlEncode(signature);
 }
 
-function createAuthToken(username) {
-  const issuedAtSeconds = Math.floor(Date.now() / 1000);
-  const payload = {
-    u: String(username || ""),
-    iat: issuedAtSeconds,
-    exp: issuedAtSeconds + AUTH_TOKEN_TTL_SECONDS
-  };
+function createStaticAuthToken() {
+  const signaturePart = signTokenPayload("static-admin-token");
+  return `static.${signaturePart}`;
+}
 
-  const payloadPart = base64UrlEncode(JSON.stringify(payload));
-  const signaturePart = signTokenPayload(payloadPart);
-  return `${payloadPart}.${signaturePart}`;
+function createAuthToken(username) {
+  if (String(username || "") !== STATIC_USERNAME) {
+    return null;
+  }
+
+  return createStaticAuthToken();
 }
 
 function verifyAuthToken(token) {
   if (!token || typeof token !== "string") {
     return null;
+  }
+
+  if (token.startsWith("static.")) {
+    const expected = createStaticAuthToken();
+    const expectedBuffer = Buffer.from(expected);
+    const providedBuffer = Buffer.from(token);
+    if (expectedBuffer.length !== providedBuffer.length) {
+      return null;
+    }
+    if (!crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
+      return null;
+    }
+    return { u: STATIC_USERNAME, exp: Number.MAX_SAFE_INTEGER };
   }
 
   const parts = token.split(".");
@@ -405,9 +418,52 @@ function verifyAuthToken(token) {
   }
 }
 
+function parseCookies(cookieHeader) {
+  const result = {};
+  const raw = String(cookieHeader || "");
+  if (!raw) {
+    return result;
+  }
+
+  const parts = raw.split(";");
+  for (const part of parts) {
+    const [name, ...rest] = part.split("=");
+    const key = String(name || "").trim();
+    if (!key) {
+      continue;
+    }
+
+    const value = rest.join("=");
+    result[key] = decodeURIComponent(String(value || "").trim());
+  }
+
+  return result;
+}
+
 function getAuthToken(req) {
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) {
+    const xAuthToken = String(req.headers["x-auth-token"] || "").trim();
+    if (xAuthToken) {
+      return xAuthToken;
+    }
+
+    const cookies = parseCookies(req.headers.cookie);
+    if (cookies.task_manager_token) {
+      return String(cookies.task_manager_token).trim();
+    }
+
+    try {
+      const host = req.headers.host || "localhost";
+      const requestUrl = new URL(req.url || "/", `http://${host}`);
+      const queryToken = String(requestUrl.searchParams.get("token") || "").trim();
+      if (queryToken) {
+        return queryToken;
+      }
+    } catch {
+      return null;
+    }
+
     return null;
   }
   return authHeader.slice("Bearer ".length).trim();
@@ -662,6 +718,12 @@ async function handleRequest(req, res, { allowStatic = true } = {}) {
 
       if (username === STATIC_USERNAME && password === STATIC_PASSWORD) {
         const token = createAuthToken(username);
+        if (token) {
+          res.setHeader(
+            "Set-Cookie",
+            `task_manager_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`
+          );
+        }
         sendJson(res, 200, { token });
         return;
       }
