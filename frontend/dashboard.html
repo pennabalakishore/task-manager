@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Manager - Dashboard</title>
+    <style>
+      :root {
+        --bg: #f7f6f4;
+        --panel: #ffffff;
+        --sidebar: #fcfaf8;
+        --ink: #222222;
+        --muted: #666666;
+        --line: #ebe4df;
+        --accent: #db4c3f;
+        --accent-dark: #c74034;
+        --p1: #d7263d;
+        --p2: #f46036;
+        --p3: #2e86ab;
+        --p4: #9098a2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 95% 0%, #ffe9df 0%, transparent 30%),
+          radial-gradient(circle at 0% 100%, #e3f7f2 0%, transparent 25%),
+          var(--bg);
+      }
+
+      .app {
+        width: min(1280px, 96%);
+        margin: 16px auto;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        overflow: hidden;
+        min-height: calc(100vh - 32px);
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        padding: 18px 16px;
+        background: var(--sidebar);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .brand-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.24rem;
+      }
+
+      .add-task-sidebar {
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        color: #fff;
+        background: var(--accent);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .add-task-sidebar:hover {
+        background: var(--accent-dark);
+      }
+
+      .nav-title,
+      .projects-title {
+        margin: 14px 0 8px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .view-list,
+      .projects-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 6px;
+      }
+
+      .view-button,
+      .project-button {
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        text-align: left;
+        padding: 10px 11px;
+        cursor: pointer;
+        color: var(--ink);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .view-button:hover,
+      .project-button:hover {
+        background: #f2ece7;
+      }
+
+      .view-button.active,
+      .project-button.active {
+        background: #ffe7dc;
+        color: #7f271f;
+        font-weight: 700;
+      }
+
+      .month-controls {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .month-controls.disabled {
+        opacity: 0.52;
+      }
+
+      select,
+      input,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      .month-controls select {
+        width: 100%;
+        border: 1px solid #dbd2cd;
+        border-radius: 9px;
+        padding: 8px;
+        background: #fff;
+      }
+
+      .main {
+        padding: 18px 24px;
+        display: grid;
+        gap: 14px;
+        grid-template-rows: auto auto auto 1fr;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .topbar h2 {
+        margin: 0;
+        font-size: 1.8rem;
+      }
+
+      .subtitle {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .top-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .search {
+        border: 1px solid #dbd2cd;
+        border-radius: 10px;
+        padding: 9px 10px;
+        width: 220px;
+      }
+
+      .ghost-btn {
+        border: 1px solid #dbd2cd;
+        border-radius: 10px;
+        padding: 9px 12px;
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .primary-btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 9px 12px;
+        color: #fff;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      .primary-btn:hover {
+        background: var(--accent-dark);
+      }
+
+      .composer {
+        border: 1px solid #e7dbd6;
+        border-radius: 12px;
+        padding: 12px;
+        background: #fffdfb;
+      }
+
+      .composer.hidden {
+        display: none;
+      }
+
+      .composer form {
+        display: grid;
+        gap: 10px;
+      }
+
+      .composer-title {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      .composer input,
+      .composer textarea,
+      .composer select {
+        border: 1px solid #dbd2cd;
+        border-radius: 9px;
+        padding: 9px 10px;
+        width: 100%;
+      }
+
+      .composer-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .composer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .summary-card {
+        border: 1px solid #ede6e1;
+        border-radius: 11px;
+        padding: 10px;
+        background: #fff;
+      }
+
+      .summary-label {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .summary-value {
+        margin-top: 4px;
+        font-size: 1.35rem;
+        font-weight: 700;
+      }
+
+      .status {
+        min-height: 1.2em;
+        color: #a1332a;
+        margin: 0;
+      }
+
+      .task-panel {
+        border: 1px solid #efe8e3;
+        border-radius: 12px;
+        padding: 12px;
+        background: #fff;
+        overflow: auto;
+      }
+
+      .tasks {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 9px;
+      }
+
+      .task {
+        border: 1px solid #ebe2dd;
+        border-radius: 12px;
+        padding: 11px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .task.completed {
+        opacity: 0.72;
+      }
+
+      .toggle {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid #bdb5b0;
+        background: #fff;
+        cursor: pointer;
+        color: transparent;
+      }
+
+      .toggle.done {
+        border-color: #22805f;
+        background: #22805f;
+        color: #fff;
+      }
+
+      .task-title {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .task.completed .task-title {
+        text-decoration: line-through;
+      }
+
+      .task-meta {
+        margin-top: 6px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        border: 1px solid #e7ddd8;
+        background: #fbf8f6;
+        color: #5f5f5f;
+      }
+
+      .chip.priority-1 {
+        border-color: #f4bcc2;
+        color: var(--p1);
+      }
+
+      .chip.priority-2 {
+        border-color: #ffd2c3;
+        color: var(--p2);
+      }
+
+      .chip.priority-3 {
+        border-color: #c8dfee;
+        color: var(--p3);
+      }
+
+      .chip.priority-4 {
+        border-color: #dadee2;
+        color: var(--p4);
+      }
+
+      .task-comments {
+        margin: 7px 0 0;
+        color: #4d4d4d;
+        font-size: 0.92rem;
+        line-height: 1.4;
+      }
+
+      .task-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .task-actions button {
+        border: 1px solid #e6ddd8;
+        background: #fff;
+        border-radius: 8px;
+        padding: 5px 8px;
+        cursor: pointer;
+      }
+
+      .empty {
+        padding: 16px;
+        border: 1px dashed #e4d8d2;
+        border-radius: 10px;
+        color: #626262;
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .summary {
+          grid-template-columns: 1fr;
+        }
+
+        .composer-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <h1>Task Manager</h1>
+        </div>
+
+        <button id="add-task-sidebar" class="add-task-sidebar">+ Add task</button>
+
+        <p class="nav-title">Views</p>
+        <ul class="view-list">
+          <li><button class="view-button active" data-view="inbox">Inbox</button></li>
+          <li><button class="view-button" data-view="today">Today</button></li>
+          <li><button class="view-button" data-view="upcoming">Upcoming</button></li>
+          <li><button class="view-button" data-view="completed">Completed</button></li>
+          <li><button class="view-button" data-view="month">Month</button></li>
+        </ul>
+
+        <div id="month-controls" class="month-controls disabled">
+          <select id="month-year"></select>
+          <select id="month-value"></select>
+        </div>
+
+        <p class="projects-title">Projects</p>
+        <ul id="project-list" class="projects-list"></ul>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h2 id="view-title">Inbox</h2>
+            <p id="view-subtitle" class="subtitle">Pending tasks across your projects.</p>
+          </div>
+
+          <div class="top-actions">
+            <input id="search" class="search" placeholder="Search tasks..." />
+            <button id="quick-add" class="primary-btn">+ Task</button>
+            <button id="logout" class="ghost-btn">Logout</button>
+          </div>
+        </header>
+
+        <section id="composer" class="composer hidden">
+          <form id="composer-form">
+            <p id="composer-title" class="composer-title">Add Task</p>
+            <input id="task-content" name="content" placeholder="Task name..." required />
+
+            <div class="composer-grid">
+              <input
+                id="task-project"
+                name="projectName"
+                list="project-options"
+                placeholder="Project (e.g., Work)"
+                required
+              />
+              <datalist id="project-options"></datalist>
+
+              <input id="task-due-date" name="dueDate" type="date" />
+
+              <select id="task-priority" name="priority">
+                <option value="1">Priority 1</option>
+                <option value="2">Priority 2</option>
+                <option value="3">Priority 3</option>
+                <option value="4" selected>Priority 4</option>
+              </select>
+            </div>
+
+            <textarea id="task-comments" name="comments" rows="2" placeholder="Comments / notes"></textarea>
+
+            <div class="composer-actions">
+              <button id="cancel-compose" type="button" class="ghost-btn">Cancel</button>
+              <button id="composer-submit" type="submit" class="primary-btn">Add task</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="summary">
+          <article class="summary-card">
+            <div class="summary-label">Displayed Tasks</div>
+            <div id="summary-total" class="summary-value">0</div>
+          </article>
+          <article class="summary-card">
+            <div class="summary-label">Pending</div>
+            <div id="summary-pending" class="summary-value">0</div>
+          </article>
+          <article class="summary-card">
+            <div class="summary-label">Completed</div>
+            <div id="summary-completed" class="summary-value">0</div>
+          </article>
+        </section>
+
+        <p id="status" class="status"></p>
+
+        <section class="task-panel">
+          <ul id="task-list" class="tasks"></ul>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("task_manager_token");
+      if (!token) {
+        window.location.href = "/login.html";
+      }
+
+      const state = {
+        view: "inbox",
+        monthYear: "",
+        monthValue: "",
+        projectFilter: "",
+        searchQuery: "",
+        tasks: [],
+        projects: [],
+        editingTaskId: null
+      };
+
+      const viewTitleElement = document.getElementById("view-title");
+      const viewSubtitleElement = document.getElementById("view-subtitle");
+      const statusElement = document.getElementById("status");
+      const taskListElement = document.getElementById("task-list");
+      const projectListElement = document.getElementById("project-list");
+      const projectOptionsElement = document.getElementById("project-options");
+      const monthYearElement = document.getElementById("month-year");
+      const monthValueElement = document.getElementById("month-value");
+      const monthControlsElement = document.getElementById("month-controls");
+      const searchElement = document.getElementById("search");
+      const summaryTotalElement = document.getElementById("summary-total");
+      const summaryPendingElement = document.getElementById("summary-pending");
+      const summaryCompletedElement = document.getElementById("summary-completed");
+      const composerElement = document.getElementById("composer");
+      const composerFormElement = document.getElementById("composer-form");
+      const taskContentElement = document.getElementById("task-content");
+      const taskProjectElement = document.getElementById("task-project");
+      const taskDueDateElement = document.getElementById("task-due-date");
+      const taskPriorityElement = document.getElementById("task-priority");
+      const taskCommentsElement = document.getElementById("task-comments");
+      const composerTitleElement = document.getElementById("composer-title");
+      const composerSubmitElement = document.getElementById("composer-submit");
+      const viewButtons = document.querySelectorAll(".view-button");
+
+      function setStatus(message) {
+        statusElement.textContent = message || "";
+      }
+
+      function toIsoDate(date) {
+        return date.toISOString().slice(0, 10);
+      }
+
+      function formatMonthLabel(year, month) {
+        const date = new Date(`${year}-${month}-01T00:00:00`);
+        return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(date);
+      }
+
+      function formatDueDate(value) {
+        if (!value) {
+          return "No due date";
+        }
+
+        const date = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+
+        return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+      }
+
+      async function apiFetch(url, options = {}) {
+        const headers = { ...(options.headers || {}), Authorization: `Bearer ${token}` };
+
+        const method = options.method || "GET";
+        if (method !== "GET" && method !== "DELETE" && !headers["Content-Type"]) {
+          headers["Content-Type"] = "application/json";
+        }
+
+        const response = await fetch(url, { ...options, headers });
+        if (response.status === 401) {
+          localStorage.removeItem("task_manager_token");
+          window.location.href = "/login.html";
+          throw new Error("Session expired");
+        }
+
+        let result = {};
+        try {
+          result = await response.json();
+        } catch {
+          result = {};
+        }
+
+        if (!response.ok) {
+          throw new Error(result.error || "Request failed");
+        }
+
+        return result;
+      }
+
+      function populateMonthSelectors() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        state.monthYear = String(currentYear);
+        state.monthValue = String(now.getMonth() + 1).padStart(2, "0");
+
+        for (let year = currentYear - 3; year <= currentYear + 3; year += 1) {
+          const option = document.createElement("option");
+          option.value = String(year);
+          option.textContent = String(year);
+          if (year === currentYear) {
+            option.selected = true;
+          }
+          monthYearElement.appendChild(option);
+        }
+
+        for (let month = 1; month <= 12; month += 1) {
+          const option = document.createElement("option");
+          const value = String(month).padStart(2, "0");
+          option.value = value;
+          option.textContent = value;
+          if (value === state.monthValue) {
+            option.selected = true;
+          }
+          monthValueElement.appendChild(option);
+        }
+      }
+
+      function getProjectOptions() {
+        const names = state.projects.map((project) => project.name).filter((name) => name.toLowerCase() !== "inbox");
+        const deduped = Array.from(new Set(names));
+        if (!deduped.length) {
+          deduped.push("General");
+        }
+        return deduped;
+      }
+
+      function updateComposerProjectOptions() {
+        const options = getProjectOptions();
+        projectOptionsElement.innerHTML = "";
+
+        options.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          projectOptionsElement.appendChild(option);
+        });
+      }
+
+      function updateActiveNavigation() {
+        viewButtons.forEach((button) => {
+          const isActive = button.dataset.view === state.view && !state.projectFilter;
+          button.classList.toggle("active", isActive);
+        });
+
+        const projectButtons = projectListElement.querySelectorAll(".project-button");
+        projectButtons.forEach((button) => {
+          const isActive = button.dataset.project === state.projectFilter && Boolean(state.projectFilter);
+          button.classList.toggle("active", isActive);
+        });
+
+        monthControlsElement.classList.toggle("disabled", state.view !== "month");
+      }
+
+      function getViewHeading() {
+        if (state.projectFilter) {
+          return {
+            title: state.projectFilter,
+            subtitle: "Project-focused pending tasks."
+          };
+        }
+
+        if (state.view === "today") {
+          return { title: "Today", subtitle: "Tasks due today." };
+        }
+
+        if (state.view === "upcoming") {
+          return { title: "Upcoming", subtitle: "Tasks planned for future dates." };
+        }
+
+        if (state.view === "completed") {
+          return { title: "Completed", subtitle: "Finished tasks history." };
+        }
+
+        if (state.view === "month") {
+          return {
+            title: "Month",
+            subtitle: formatMonthLabel(state.monthYear, state.monthValue)
+          };
+        }
+
+        return { title: "Inbox", subtitle: "Pending tasks across your projects." };
+      }
+
+      function renderHeading() {
+        const heading = getViewHeading();
+        viewTitleElement.textContent = heading.title;
+        viewSubtitleElement.textContent = heading.subtitle;
+      }
+
+      function renderProjects() {
+        projectListElement.innerHTML = "";
+        const sorted = [...state.projects]
+          .filter((project) => project.name.toLowerCase() !== "inbox")
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        sorted.forEach((project) => {
+          const item = document.createElement("li");
+          const button = document.createElement("button");
+          button.className = "project-button";
+          button.dataset.project = project.name;
+          button.innerHTML = `<span>${project.name}</span><span>${project.pending}</span>`;
+          button.addEventListener("click", () => {
+            state.projectFilter = project.name;
+            state.view = "inbox";
+            updateActiveNavigation();
+            renderHeading();
+            loadTasks();
+          });
+          item.appendChild(button);
+          projectListElement.appendChild(item);
+        });
+
+        updateActiveNavigation();
+      }
+
+      function getVisibleTasks() {
+        const query = state.searchQuery.trim().toLowerCase();
+        if (!query) {
+          return [...state.tasks];
+        }
+
+        return state.tasks.filter((task) => {
+          const joined = `${task.content} ${task.projectName} ${task.comments || ""}`.toLowerCase();
+          return joined.includes(query);
+        });
+      }
+
+      function renderSummary(tasks) {
+        const total = tasks.length;
+        const completed = tasks.filter((task) => task.status === "completed").length;
+        const pending = total - completed;
+
+        summaryTotalElement.textContent = String(total);
+        summaryPendingElement.textContent = String(pending);
+        summaryCompletedElement.textContent = String(completed);
+      }
+
+      function getEmptyMessage() {
+        if (state.searchQuery) {
+          return "No tasks match your search.";
+        }
+
+        if (state.projectFilter) {
+          return "No pending tasks in this project.";
+        }
+
+        if (state.view === "today") {
+          return "No tasks due today.";
+        }
+
+        if (state.view === "upcoming") {
+          return "No upcoming tasks.";
+        }
+
+        if (state.view === "completed") {
+          return "No completed tasks yet.";
+        }
+
+        if (state.view === "month") {
+          return "No tasks in this month.";
+        }
+
+        return "Inbox is empty.";
+      }
+
+      function renderTasks() {
+        const tasks = getVisibleTasks();
+        renderSummary(tasks);
+        taskListElement.innerHTML = "";
+
+        if (!tasks.length) {
+          const empty = document.createElement("li");
+          empty.className = "empty";
+          empty.textContent = getEmptyMessage();
+          taskListElement.appendChild(empty);
+          return;
+        }
+
+        tasks.forEach((task) => {
+          const item = document.createElement("li");
+          item.className = `task ${task.status === "completed" ? "completed" : ""}`;
+
+          const toggle = document.createElement("button");
+          toggle.className = `toggle ${task.status === "completed" ? "done" : ""}`;
+          toggle.textContent = task.status === "completed" ? "✓" : "";
+          toggle.addEventListener("click", () => {
+            const status = task.status === "completed" ? "pending" : "completed";
+            updateTask(task.id, { status });
+          });
+
+          const body = document.createElement("div");
+          const title = document.createElement("p");
+          title.className = "task-title";
+          title.textContent = task.content;
+          body.appendChild(title);
+
+          const meta = document.createElement("div");
+          meta.className = "task-meta";
+          const project = document.createElement("span");
+          project.className = "chip";
+          project.textContent = task.projectName || "General";
+          const dueDate = document.createElement("span");
+          dueDate.className = "chip";
+          dueDate.textContent = formatDueDate(task.dueDate);
+          const priority = document.createElement("span");
+          priority.className = `chip priority-${task.priority || 4}`;
+          priority.textContent = `P${task.priority || 4}`;
+
+          meta.appendChild(project);
+          meta.appendChild(dueDate);
+          meta.appendChild(priority);
+          body.appendChild(meta);
+
+          if (task.comments) {
+            const comments = document.createElement("p");
+            comments.className = "task-comments";
+            comments.textContent = task.comments;
+            body.appendChild(comments);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "task-actions";
+          const editButton = document.createElement("button");
+          editButton.type = "button";
+          editButton.textContent = "Edit";
+          editButton.addEventListener("click", () => openComposer(task));
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.textContent = "Delete";
+          deleteButton.addEventListener("click", () => deleteTask(task.id));
+
+          actions.appendChild(editButton);
+          actions.appendChild(deleteButton);
+
+          item.appendChild(toggle);
+          item.appendChild(body);
+          item.appendChild(actions);
+          taskListElement.appendChild(item);
+        });
+      }
+
+      function setComposerModeForCreate() {
+        state.editingTaskId = null;
+        composerTitleElement.textContent = "Add Task";
+        composerSubmitElement.textContent = "Add task";
+      }
+
+      function setComposerModeForEdit(task) {
+        state.editingTaskId = task.id;
+        composerTitleElement.textContent = "Edit Task";
+        composerSubmitElement.textContent = "Save changes";
+
+        taskContentElement.value = task.content || "";
+        taskProjectElement.value = task.projectName || "General";
+        taskDueDateElement.value = task.dueDate || "";
+        taskPriorityElement.value = String(task.priority || 4);
+        taskCommentsElement.value = task.comments || "";
+      }
+
+      function openComposer(task = null) {
+        composerElement.classList.remove("hidden");
+        const options = getProjectOptions();
+
+        if (task) {
+          setComposerModeForEdit(task);
+        } else {
+          setComposerModeForCreate();
+          taskProjectElement.value = state.projectFilter || options[0] || "General";
+          taskPriorityElement.value = "4";
+          taskCommentsElement.value = "";
+          taskContentElement.value = "";
+
+          if (state.view === "today") {
+            taskDueDateElement.value = toIsoDate(new Date());
+          } else if (state.view === "upcoming") {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            taskDueDateElement.value = toIsoDate(tomorrow);
+          } else if (state.view === "month") {
+            const day = String(new Date().getDate()).padStart(2, "0");
+            taskDueDateElement.value = `${state.monthYear}-${state.monthValue}-${day}`;
+          } else {
+            taskDueDateElement.value = "";
+          }
+        }
+
+        taskContentElement.focus();
+      }
+
+      function closeComposer() {
+        composerElement.classList.add("hidden");
+        composerFormElement.reset();
+        setComposerModeForCreate();
+      }
+
+      async function fetchProjects() {
+        const result = await apiFetch("/projects");
+        state.projects = Array.isArray(result.projects) ? result.projects : [];
+        updateComposerProjectOptions();
+        renderProjects();
+      }
+
+      function buildTasksUrl() {
+        const params = new URLSearchParams();
+        params.set("view", state.view);
+
+        if (state.view === "month") {
+          params.set("year", state.monthYear);
+          params.set("month", state.monthValue);
+        }
+
+        if (state.projectFilter) {
+          params.set("projectName", state.projectFilter);
+        }
+
+        return `/tasks?${params.toString()}`;
+      }
+
+      async function loadTasks() {
+        try {
+          setStatus("Loading tasks...");
+          const result = await apiFetch(buildTasksUrl());
+          state.tasks = Array.isArray(result.tasks) ? result.tasks : [];
+          renderHeading();
+          renderTasks();
+          setStatus("");
+        } catch (error) {
+          setStatus(error.message);
+        }
+      }
+
+      async function createTask(payload) {
+        try {
+          setStatus("Creating task...");
+          await apiFetch("/tasks", { method: "POST", body: JSON.stringify(payload) });
+          closeComposer();
+          await fetchProjects();
+          await loadTasks();
+        } catch (error) {
+          setStatus(error.message);
+        }
+      }
+
+      async function updateTask(taskId, payload) {
+        try {
+          await apiFetch(`/tasks/${encodeURIComponent(taskId)}`, {
+            method: "PUT",
+            body: JSON.stringify(payload)
+          });
+          await fetchProjects();
+          await loadTasks();
+        } catch (error) {
+          setStatus(error.message);
+        }
+      }
+
+      async function deleteTask(taskId) {
+        const ok = window.confirm("Delete this task?");
+        if (!ok) {
+          return;
+        }
+
+        try {
+          await apiFetch(`/tasks/${encodeURIComponent(taskId)}`, { method: "DELETE" });
+          await fetchProjects();
+          await loadTasks();
+        } catch (error) {
+          setStatus(error.message);
+        }
+      }
+
+      document.getElementById("logout").addEventListener("click", () => {
+        localStorage.removeItem("task_manager_token");
+        window.location.href = "/login.html";
+      });
+
+      document.getElementById("quick-add").addEventListener("click", openComposer);
+      document.getElementById("add-task-sidebar").addEventListener("click", openComposer);
+      document.getElementById("cancel-compose").addEventListener("click", closeComposer);
+
+      composerFormElement.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const content = String(taskContentElement.value || "").trim();
+        const projectName = String(taskProjectElement.value || "").trim() || "General";
+        const comments = String(taskCommentsElement.value || "").trim();
+        const dueDate = String(taskDueDateElement.value || "").trim();
+        const priority = Number(taskPriorityElement.value || "4");
+
+        if (!content) {
+          setStatus("Task name is required.");
+          return;
+        }
+
+        const payload = {
+          content,
+          projectName,
+          comments,
+          priority
+        };
+
+        if (dueDate) {
+          payload.dueDate = dueDate;
+        } else if (state.editingTaskId) {
+          payload.dueDate = null;
+        }
+
+        if (state.view === "month" && !dueDate) {
+          payload.year = state.monthYear;
+          payload.month = state.monthValue;
+        }
+
+        if (state.editingTaskId) {
+          await updateTask(state.editingTaskId, payload);
+          closeComposer();
+        } else {
+          await createTask(payload);
+        }
+      });
+
+      viewButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          state.view = button.dataset.view;
+          state.projectFilter = "";
+          updateActiveNavigation();
+          renderHeading();
+          loadTasks();
+        });
+      });
+
+      searchElement.addEventListener("input", () => {
+        state.searchQuery = String(searchElement.value || "");
+        renderTasks();
+      });
+
+      monthYearElement.addEventListener("change", () => {
+        state.monthYear = monthYearElement.value;
+        if (state.view === "month") {
+          loadTasks();
+        }
+      });
+
+      monthValueElement.addEventListener("change", () => {
+        state.monthValue = monthValueElement.value;
+        if (state.view === "month") {
+          loadTasks();
+        }
+      });
+
+      async function init() {
+        try {
+          setComposerModeForCreate();
+          populateMonthSelectors();
+          updateActiveNavigation();
+          renderHeading();
+          await fetchProjects();
+          await loadTasks();
+        } catch (error) {
+          setStatus(error.message);
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

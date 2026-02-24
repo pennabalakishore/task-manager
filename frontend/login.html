@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Manager - Login</title>
+    <style>
+      :root {
+        --bg: #fbf8f6;
+        --card: #ffffff;
+        --ink: #1f1f1f;
+        --muted: #676767;
+        --accent: #db4c3f;
+        --accent-dark: #c23d33;
+        --outline: #ebdfda;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Trebuchet MS", "Gill Sans", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 88% 8%, #ffe9db 0%, transparent 35%),
+          radial-gradient(circle at 5% 95%, #e7f6f2 0%, transparent 34%),
+          var(--bg);
+      }
+
+      .layout {
+        width: min(980px, 92%);
+        margin: 40px auto;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 24px;
+      }
+
+      .brand {
+        background: linear-gradient(145deg, #1f2a44, #32496e);
+        border-radius: 26px;
+        padding: 34px;
+        color: #eef3ff;
+        box-shadow: 0 20px 45px rgba(26, 37, 63, 0.26);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 2.1rem;
+      }
+
+      .brand p {
+        margin: 14px 0 0;
+        line-height: 1.5;
+      }
+
+      .chips {
+        margin-top: 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chips span {
+        font-size: 0.84rem;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--outline);
+        border-radius: 22px;
+        padding: 30px;
+        box-shadow: 0 15px 30px rgba(57, 36, 27, 0.08);
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-size: 1.8rem;
+      }
+
+      .panel p {
+        margin: 8px 0 22px;
+        color: var(--muted);
+      }
+
+      label {
+        display: block;
+        margin: 14px 0 6px;
+        font-weight: 700;
+      }
+
+      input {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #d8cbc5;
+        border-radius: 12px;
+        background: #fff;
+        font-size: 1rem;
+      }
+
+      button {
+        width: 100%;
+        margin-top: 16px;
+        padding: 12px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
+      }
+
+      .hint {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .error {
+        margin-top: 10px;
+        min-height: 1.2em;
+        color: #b62d23;
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 860px) {
+        .layout {
+          grid-template-columns: 1fr;
+          margin: 20px auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <section class="brand">
+        <h1>Task Manager</h1>
+        <p>
+          Plan your day with a focused workspace inspired by modern task tools.
+          Track projects, view today/upcoming work, and keep everything in one place.
+        </p>
+        <div class="chips">
+          <span>Inbox</span>
+          <span>Today</span>
+          <span>Upcoming</span>
+          <span>Projects</span>
+          <span>Priorities</span>
+        </div>
+      </section>
+
+      <main class="panel">
+        <h2>Welcome Back</h2>
+        <p>Sign in to continue to your workspace.</p>
+
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" required />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+          <button type="submit">Login</button>
+          <p id="error" class="error"></p>
+        </form>
+
+        <!-- <p class="hint">Default login: <strong>admin</strong> / <strong>1234</strong></p> -->
+      </main>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("task_manager_token");
+      if (token) {
+        window.location.href = "/dashboard.html";
+      }
+
+      const form = document.getElementById("login-form");
+      const errorElement = document.getElementById("error");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorElement.textContent = "";
+
+        const formData = new FormData(form);
+        const payload = {
+          username: String(formData.get("username") || "").trim(),
+          password: String(formData.get("password") || "")
+        };
+
+        try {
+          const response = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || "Login failed");
+          }
+
+          localStorage.setItem("task_manager_token", result.token);
+          window.location.href = "/dashboard.html";
+        } catch (error) {
+          errorElement.textContent = error.message;
+        }
+      });
+    </script>
+  </body>
+</html>
+
