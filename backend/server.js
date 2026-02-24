@@ -8,13 +8,19 @@ const PORT = process.env.PORT || 3000;
 const STATIC_USERNAME = "admin";
 const STATIC_PASSWORD = "1234";
 const IS_VERCEL = Boolean(process.env.VERCEL);
+const DEFAULT_AUTH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 14;
+const configuredTokenTtl = Number.parseInt(String(process.env.AUTH_TOKEN_TTL_SECONDS || ""), 10);
+const AUTH_TOKEN_SECRET =
+  process.env.AUTH_TOKEN_SECRET || `task-manager-${STATIC_USERNAME}-${STATIC_PASSWORD}-local-secret`;
+const AUTH_TOKEN_TTL_SECONDS =
+  Number.isInteger(configuredTokenTtl) && configuredTokenTtl > 0
+    ? configuredTokenTtl
+    : DEFAULT_AUTH_TOKEN_TTL_SECONDS;
 
 const DATA_DIR = IS_VERCEL ? path.join("/tmp", "task-manager-data") : path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "tasks.json");
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 const VALID_VIEWS = new Set(["inbox", "today", "upcoming", "completed", "month"]);
-
-const sessions = new Map();
 
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -264,6 +270,86 @@ function resolveBucket(payload, fallbackYear, fallbackMonth) {
   return { year: now.slice(0, 4), month: now.slice(5, 7) };
 }
 
+function base64UrlEncode(inputBuffer) {
+  return Buffer.from(inputBuffer)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlDecodeToString(input) {
+  const normalized = String(input || "").replace(/-/g, "+").replace(/_/g, "/");
+  const padLength = (4 - (normalized.length % 4 || 4)) % 4;
+  const withPadding = `${normalized}${"=".repeat(padLength)}`;
+  return Buffer.from(withPadding, "base64").toString("utf8");
+}
+
+function signTokenPayload(payloadPart) {
+  const signature = crypto.createHmac("sha256", AUTH_TOKEN_SECRET).update(payloadPart).digest();
+  return base64UrlEncode(signature);
+}
+
+function createAuthToken(username) {
+  const issuedAtSeconds = Math.floor(Date.now() / 1000);
+  const payload = {
+    u: String(username || ""),
+    iat: issuedAtSeconds,
+    exp: issuedAtSeconds + AUTH_TOKEN_TTL_SECONDS
+  };
+
+  const payloadPart = base64UrlEncode(JSON.stringify(payload));
+  const signaturePart = signTokenPayload(payloadPart);
+  return `${payloadPart}.${signaturePart}`;
+}
+
+function verifyAuthToken(token) {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  const parts = token.split(".");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+
+  const payloadPart = parts[0];
+  const signaturePart = parts[1];
+  const expectedSignature = signTokenPayload(payloadPart);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  const providedBuffer = Buffer.from(signaturePart);
+
+  if (expectedBuffer.length !== providedBuffer.length) {
+    return null;
+  }
+
+  if (!crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
+    return null;
+  }
+
+  try {
+    const decoded = base64UrlDecodeToString(payloadPart);
+    const payload = JSON.parse(decoded);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+
+    if (String(payload.u || "") !== STATIC_USERNAME) {
+      return null;
+    }
+
+    if (!Number.isInteger(payload.exp) || payload.exp < nowSeconds) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 function getAuthToken(req) {
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) {
@@ -274,11 +360,12 @@ function getAuthToken(req) {
 
 function requireAuth(req, res) {
   const token = getAuthToken(req);
-  if (!token || !sessions.has(token)) {
+  const payload = verifyAuthToken(token);
+  if (!payload) {
     sendJson(res, 401, { error: "Unauthorized" });
     return null;
   }
-  return token;
+  return payload;
 }
 
 function getOrCreateMonthBucket(data, year, month) {
@@ -519,8 +606,7 @@ async function handleRequest(req, res, { allowStatic = true } = {}) {
       const password = String(body.password || "");
 
       if (username === STATIC_USERNAME && password === STATIC_PASSWORD) {
-        const token = crypto.randomBytes(24).toString("hex");
-        sessions.set(token, { username, createdAt: Date.now() });
+        const token = createAuthToken(username);
         sendJson(res, 200, { token });
         return;
       }
