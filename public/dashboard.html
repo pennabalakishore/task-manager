@@ -498,7 +498,14 @@
             <input id="task-content" name="content" placeholder="Task name..." required />
 
             <div class="composer-grid">
-              <select id="task-project" name="projectName" required></select>
+              <input
+                id="task-project"
+                name="projectName"
+                list="task-project-options"
+                placeholder="Type or select project name"
+                required
+              />
+              <datalist id="task-project-options"></datalist>
 
               <input id="task-due-date" name="dueDate" type="date" />
 
@@ -576,6 +583,7 @@
       const composerFormElement = document.getElementById("composer-form");
       const taskContentElement = document.getElementById("task-content");
       const taskProjectElement = document.getElementById("task-project");
+      const taskProjectOptionsElement = document.getElementById("task-project-options");
       const taskDueDateElement = document.getElementById("task-due-date");
       const taskPriorityElement = document.getElementById("task-priority");
       const taskCommentsElement = document.getElementById("task-comments");
@@ -677,15 +685,14 @@
 
       function updateProjectSelectors() {
         const options = getProjectOptions();
-        const currentTaskProject = taskProjectElement.value;
+        const currentTaskProject = String(taskProjectElement.value || "").trim();
         const currentFilter = state.projectFilter;
 
-        taskProjectElement.innerHTML = "";
+        taskProjectOptionsElement.innerHTML = "";
         options.forEach((name) => {
           const option = document.createElement("option");
           option.value = name;
-          option.textContent = name;
-          taskProjectElement.appendChild(option);
+          taskProjectOptionsElement.appendChild(option);
         });
 
         if (currentTaskProject && options.includes(currentTaskProject)) {
