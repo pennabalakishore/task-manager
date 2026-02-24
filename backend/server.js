@@ -88,8 +88,63 @@ function sendFile(res, filePath) {
   });
 }
 
+function parseBodyInputIfPresent(req) {
+  if (req.body !== undefined && req.body !== null) {
+    if (Buffer.isBuffer(req.body)) {
+      return req.body.toString("utf8");
+    }
+
+    if (typeof req.body === "string") {
+      return req.body;
+    }
+
+    if (typeof req.body === "object") {
+      return req.body;
+    }
+  }
+
+  if (req.rawBody !== undefined && req.rawBody !== null) {
+    if (Buffer.isBuffer(req.rawBody)) {
+      return req.rawBody.toString("utf8");
+    }
+
+    if (typeof req.rawBody === "string") {
+      return req.rawBody;
+    }
+  }
+
+  return undefined;
+}
+
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
+    const providedBody = parseBodyInputIfPresent(req);
+    if (providedBody !== undefined) {
+      if (typeof providedBody === "object") {
+        resolve(providedBody);
+        return;
+      }
+
+      const text = String(providedBody || "").trim();
+      if (!text) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(text));
+        return;
+      } catch {
+        reject(new Error("Invalid JSON body"));
+        return;
+      }
+    }
+
+    if (req.readableEnded) {
+      resolve({});
+      return;
+    }
+
     let body = "";
 
     req.on("data", (chunk) => {
