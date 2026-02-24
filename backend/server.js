@@ -7,8 +7,9 @@ const { URL } = require("url");
 const PORT = process.env.PORT || 3000;
 const STATIC_USERNAME = "admin";
 const STATIC_PASSWORD = "1234";
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = IS_VERCEL ? path.join("/tmp", "task-manager-data") : path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "tasks.json");
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 const VALID_VIEWS = new Set(["inbox", "today", "upcoming", "completed", "month"]);
@@ -497,10 +498,18 @@ function serveStatic(req, res, pathname) {
   });
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req, res, { allowStatic = true } = {}) {
   const host = req.headers.host || "localhost";
   const requestUrl = new URL(req.url, `http://${host}`);
-  const { pathname, searchParams } = requestUrl;
+  const searchParams = requestUrl.searchParams;
+  const rawPathname = requestUrl.pathname;
+  let pathname = rawPathname;
+  if (pathname === "/api") {
+    pathname = "/";
+  } else if (pathname.startsWith("/api/")) {
+    pathname = pathname.slice(4);
+  }
+  const isApiRequest = rawPathname === "/api" || rawPathname.startsWith("/api/");
   const method = req.method || "GET";
 
   if (method === "POST" && pathname === "/login") {
@@ -631,8 +640,16 @@ const server = http.createServer(async (req, res) => {
     }
 
     const taskIdMatch = pathname.match(/^\/tasks\/([^/]+)$/);
-    if (taskIdMatch) {
-      const taskId = decodeURIComponent(taskIdMatch[1]);
+    const taskIdFromQuery =
+      (method === "PUT" || method === "DELETE") && pathname === "/tasks"
+        ? String(searchParams.get("id") || "").trim()
+        : "";
+    const taskId =
+      taskIdMatch && taskIdMatch[1]
+        ? decodeURIComponent(taskIdMatch[1])
+        : taskIdFromQuery || null;
+
+    if (taskId) {
 
       if (method === "PUT") {
         try {
@@ -770,20 +787,44 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if ((method === "PUT" || method === "DELETE") && pathname === "/tasks") {
+      sendJson(res, 400, { error: "Task id is required" });
+      return;
+    }
+
     sendJson(res, 405, { error: "Method not allowed" });
     return;
   }
 
-  if (method === "GET") {
+  if (allowStatic && method === "GET" && !isApiRequest) {
     serveStatic(req, res, pathname);
     return;
   }
 
   sendJson(res, 404, { error: "Not found" });
-});
+}
 
 ensureDataFile();
 
-server.listen(PORT, () => {
-  console.log(`Task Manager server running on http://localhost:${PORT}`);
-});
+function createServer() {
+  return http.createServer((req, res) => {
+    handleRequest(req, res, { allowStatic: true }).catch((error) => {
+      if (!res.headersSent) {
+        sendJson(res, 500, { error: "Internal server error" });
+      }
+      console.error("Unhandled request error:", error);
+    });
+  });
+}
+
+if (require.main === module) {
+  const server = createServer();
+  server.listen(PORT, () => {
+    console.log(`Task Manager server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = {
+  handleRequest,
+  createServer
+};

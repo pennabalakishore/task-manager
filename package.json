@@ -4,9 +4,9 @@
   "description": "Personal task manager with static login and JSON file storage",
   "main": "backend/server.js",
   "scripts": {
+    "build": "node scripts/sync-public.js",
     "start": "node backend/server.js",
     "dev": "node backend/server.js"
   },
   "license": "MIT"
 }
-

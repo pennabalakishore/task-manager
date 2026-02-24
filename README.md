@@ -3,13 +3,12 @@
 Personal task manager inspired by modern productivity apps:
 
 - Static login (`admin` / `1234`)
-- JSON file persistence (`backend/data/tasks.json`)
-- Month-wise storage (`year -> month -> tasks`)
+- Month-wise organization (`year -> month -> tasks`)
 - Sidebar views: `Inbox`, `Today`, `Upcoming`, `Completed`, `Month`
-- Projects list with counts (system Inbox is hidden from project list)
+- Project list and quick task management
 - Task fields: `content`, `projectName`, `comments`, `dueDate`, `priority`, `status`
 
-## Run
+## Local Run
 
 ```bash
 npm start
@@ -19,19 +18,33 @@ Open:
 
 `http://localhost:3000`
 
-## Main API
+## API (Current Frontend Uses `/api/*`)
 
-- `POST /login` -> `{ token }`
-- `GET /projects` -> projects with `total/pending/completed` counts
-- `GET /tasks?view=inbox|today|upcoming|completed|month&year=YYYY&month=MM&projectName=Work`
-- `POST /tasks` body:
-  - `content` (required)
-  - `projectName` (optional, default `General`)
-  - `comments` (optional)
-  - `dueDate` (optional, `YYYY-MM-DD`)
-  - `priority` (optional, `1-4`)
-  - `year` + `month` (optional bucket override)
-- `PUT /tasks/:id` updatable:
-  - `content`, `projectName`, `comments`, `dueDate`, `priority`, `status`, `year`, `month`
-- `DELETE /tasks/:id`
-# task-manager
+- `POST /api/login` -> `{ token }`
+- `GET /api/projects` -> project counts
+- `GET /api/tasks?view=inbox|today|upcoming|completed|month&year=YYYY&month=MM&projectName=Work`
+- `POST /api/tasks`
+- `PUT /api/tasks?id=<taskId>`
+- `DELETE /api/tasks?id=<taskId>`
+
+## Deploy To Vercel
+
+1. Push this repo to GitHub/GitLab/Bitbucket.
+2. Import the repo in Vercel.
+3. Vercel will run `npm run build` (configured in `vercel.json`) and publish `public/` + `api/`.
+4. Deploy.
+
+CLI alternative:
+
+```bash
+npm i -g vercel
+vercel
+vercel --prod
+```
+
+## Important Note About Data On Vercel
+
+This app currently uses file storage. On Vercel, writable storage is only temporary (`/tmp`), so task data is **not guaranteed to persist** across cold starts/redeployments.
+
+If you want real persistence on Vercel, I can migrate storage to Vercel Blob or KV while keeping the same UI/API behavior.
+
